@@ -1,0 +1,69 @@
+- name: "Install Docker on rhel"
+  hosts: "aws"
+  become: True
+  remote_user: "ec2-user"
+  gather_facts: False
+  vars:
+    repo: "/etc/yum.repos.d/docker-ce.repo"
+    paths:
+      pip: "/tmp/get-pip.py"
+    urls:
+      pip: "https://bootstrap.pypa.io/get-pip.py"
+
+  tasks:
+    # TODO: handle non-amazon installations of container-selinux
+    - name: "Install container-selinux"
+      yum:
+        name: "container-selinux"
+        enablerepo: "rhui-REGION-rhel-server-extras"
+        state: "present"
+        lock_timeout: 2
+
+    # to enforce idempotence, since add-repo always causes change: compare contents through checksum
+    # @command: there is no module (not even yum_repository) equivalent to yum-config-manager
+    # the modular way to get a checksum is the stat module, but all comparison logic handled in command
+    - name: "Add the docker repo to host"
+      shell: "{{ md5 }} && {{ add_repo }}  && {{ md5 }}"
+      vars:
+        add_repo: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+        md5: "md5sum {{ repo }} | awk '{ print $1 }'"
+      register: cmd
+      changed_when: cmd.stdout_lines[0] != cmd.stdout_lines[(cmd.stdout_lines | length - 1)]
+
+    - name: "Install docker-ce"
+      yum:
+        name: "docker-ce"
+        state: "present"
+
+    # ansible requires epel-release
+    - name: "Install ansible"
+      yum:
+        name: "{{ packages }}"
+        state: "present"
+      vars:
+        packages:
+          - "https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
+
+    - name: "Install ansible"
+      yum:
+        name: "ansible"
+        state: "present"
+
+    # awx requires pip's docker-compose module
+    - name: "Download pip"
+      uri:
+        url: "{{ urls.pip }}"
+        method: "GET"
+        dest: "{{ paths.pip }}"
+
+    - name: "Install pip"
+      command: "python {{ paths.pip }}"
+
+    - name: "Remove file that will break pip install"
+      file:
+        path: "/usr/lib/python2.7/site-packages/requests*"
+        state: "absent"
+
+    - name: "Install docker-compose through pip"
+      pip:
+        name: "docker-compose"

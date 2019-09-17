@@ -1,0 +1,29 @@
+- name: "Find files with regexp"
+  hosts: aws
+  remote_user: "ec2-user"
+  gather_facts: False
+
+  tasks:
+    - name: "List files"
+      find:
+        paths: "/usr/lib/python2.7/site-packages"
+        patterns: "^requests"
+        file_type: "directory"
+        use_regex: True
+      register: find_res
+      become: True
+
+    - name: "print files"
+      debug:
+        msg: "{{ find_res | json_query('@.files[*].path') }}"
+      register: _requests_packages
+
+    - name: "delete files"
+      file:
+        path: "{{ req_package }}"
+        state: "absent"
+      loop: "{{ _requests_packages.msg }}"
+      loop_control:
+        loop_var: req_package
+      become: True
+      register: deletion
