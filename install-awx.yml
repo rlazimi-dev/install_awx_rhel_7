@@ -64,8 +64,8 @@
     - name: "Remove existing requests packages (they will be reinstalled with docker-compose)"
       find:
         paths: "/usr/lib/python2.7/site-packages"
-        patterns: "^requests"
-        file_type: "directory"
+        patterns: "^requests.+"
+        file_type: "any" # including file and directory
         use_regex: True
       register: find_res
 
