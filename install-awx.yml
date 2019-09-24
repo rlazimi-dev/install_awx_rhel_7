@@ -7,8 +7,10 @@
     repo: "/etc/yum.repos.d/docker-ce.repo"
     paths:
       pip: "/tmp/get-pip.py"
+      awx: "/usr/src/awx"
     urls:
       pip: "https://bootstrap.pypa.io/get-pip.py"
+      awx: "https://github.com/ansible/awx.git"
 
   tasks:
     # TODO: handle non-amazon installations of container-selinux
@@ -19,9 +21,9 @@
         state: "present"
         lock_timeout: 2
 
-    # to enforce idempotence, since add-repo always causes change: compare contents through checksum
     # @command: there is no module (not even yum_repository) equivalent to yum-config-manager
     # the modular way to get a checksum is the stat module, but all comparison logic handled in command
+    # md5sum commands not necessary but maintain idempotence
     - name: "Add the docker repo to host"
       shell: "{{ md5 }} && {{ add_repo }}  && {{ md5 }}"
       vars:
@@ -59,11 +61,56 @@
     - name: "Install pip"
       command: "python {{ paths.pip }}"
 
-    - name: "Remove file that will break pip install"
+    - name: "Remove existing requests packages (they will be reinstalled with docker-compose)"
+      find:
+        paths: "/usr/lib/python2.7/site-packages"
+        patterns: "^requests"
+        file_type: "directory"
+        use_regex: True
+      register: find_res
+
+    - name: "Mark the requests packages for deletion"
+      debug:
+        msg: "{{ find_res | json_query('@.files[*].path') }}"
+      register: _requests_packages
+      no_log: True
+
+    - name: "Delete requests packages"
       file:
-        path: "/usr/lib/python2.7/site-packages/requests*"
+        path: "{{ req_package }}"
         state: "absent"
+      loop: "{{ _requests_packages.msg }}"
+      loop_control:
+        loop_var: req_package
+      register: deletion
 
     - name: "Install docker-compose through pip"
       pip:
         name: "docker-compose"
+
+    - name: "Start docker"
+      systemd:
+        name: "docker"
+        state: "started"
+
+    - name: "Install git (necessary for cloning AWX)"
+      package:
+        name: git
+        state: "present"
+
+    - name: "Clone the AWX repo"
+      git:
+        repo: "{{ urls.awx }}"
+        dest: "{{ paths.awx }}"
+        force: True
+        accept_hostkey: True
+
+    - name: "Run the installer in the repo"
+      command: "ansible-playbook {{ paths.awx }}/installer/install.yml -i {{ paths.awx }}/installer/inventory"
+      register: tower_installation
+
+    - name: "Print Tower installation results"
+      debug:
+        msg: "{{ tower_installation }}"
+
+    # see tower modules in https://docs.ansible.com/ansible/latest/modules/list_of_all_modules.html

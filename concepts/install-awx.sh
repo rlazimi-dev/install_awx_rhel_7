@@ -21,5 +21,8 @@ sudo pip install docker-compose
 sudo yum install git -y
 git clone https://github.com/ansible/awx.git
 
+# start docker
+sudo systemctl start docker
+
 # run playbook
-cd awx/installer/ && sudo ansible-playbook install.yml -i inventory && cd ../
+cd awx/installer/ && sudo ansible-playbook install.yml -i inventory && cd ../../
