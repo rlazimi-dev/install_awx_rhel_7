@@ -1,0 +1,21 @@
+- name: "Install git (necessary for cloning AWX)"
+  package:
+    name: git
+    state: "present"
+
+- name: "Clone the AWX repo"
+  git:
+    repo: "{{ urls.awx }}"
+    dest: "{{ paths.awx }}"
+    force: True
+    accept_hostkey: True
+
+- name: "Run the installer in the repo"
+  command: "ansible-playbook {{ paths.awx }}/installer/install.yml -i {{ paths.awx }}/installer/inventory"
+  register: tower_installation
+
+- name: "Print Tower installation results"
+  debug:
+    msg: "{{ tower_installation }}"
+
+# see tower modules in https://docs.ansible.com/ansible/latest/modules/list_of_all_modules.html

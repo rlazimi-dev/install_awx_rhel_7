@@ -1,0 +1,8 @@
+- name: "Install AWX on rhel7 AWS"
+  hosts: aws
+  gather_facts: False
+  remote_user: "ec2-user"
+  become: True
+
+  roles:
+    - "install-awx"

@@ -1,0 +1,9 @@
+    # awx requires pip's docker-compose module
+    - name: "Download pip"
+      uri:
+        url: "{{ urls.pip }}"
+        method: "GET"
+        dest: "{{ paths.pip }}"
+
+    - name: "Install pip"
+      command: "python {{ paths.pip }}"

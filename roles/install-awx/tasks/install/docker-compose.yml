@@ -1,0 +1,26 @@
+    - name: "Remove existing requests packages (they will be reinstalled with docker-compose)"
+      find:
+        paths: "/usr/lib/python2.7/site-packages"
+        patterns: "^requests.+"
+        file_type: "any" # including file and directory
+        use_regex: True
+      register: find_res
+
+    - name: "Mark the requests packages for deletion"
+      debug:
+        msg: "{{ find_res | json_query('@.files[*].path') }}"
+      register: _requests_packages
+      no_log: True
+
+    - name: "Delete requests packages"
+      file:
+        path: "{{ req_package }}"
+        state: "absent"
+      loop: "{{ _requests_packages.msg }}"
+      loop_control:
+        loop_var: req_package
+      register: deletion
+
+    - name: "Install docker-compose through pip"
+      pip:
+        name: "docker-compose"

@@ -1,0 +1,27 @@
+- name: "Install container-selinux"
+  yum:
+    name: "container-selinux"
+    enablerepo: "rhui-REGION-rhel-server-extras"
+    state: "present"
+    lock_timeout: 2
+
+# @command: there is no module (not even yum_repository) equivalent to yum-config-manager
+# the modular way to get a checksum is the stat module, but all comparison logic handled in command
+# md5sum commands not necessary but maintain idempotence
+- name: "Add the docker repo to host"
+  shell: "{{ md5 }} && {{ add_repo }}  && {{ md5 }}"
+  vars:
+    add_repo: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+    md5: "md5sum {{ repo }} | awk '{ print $1 }'"
+  register: cmd
+  changed_when: cmd.stdout_lines[0] != cmd.stdout_lines[(cmd.stdout_lines | length - 1)]
+
+- name: "Install docker-ce"
+  yum:
+    name: "docker-ce"
+    state: "present"
+
+- name: "Start docker"
+  systemd:
+    name: "docker"
+    state: "started"

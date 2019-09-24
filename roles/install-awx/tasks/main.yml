@@ -1,0 +1,6 @@
+---
+- import_tasks: "install/docker.yml"
+- import_tasks: "install/ansible.yml"
+- import_tasks: "install/pip.yml"
+- import_tasks: "install/docker-compose.yml"
+- import_tasks: "install/git.yml"

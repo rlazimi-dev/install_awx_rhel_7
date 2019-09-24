@@ -1,0 +1,9 @@
+---
+# vars file for install-awx
+repo: "/etc/yum.repos.d/docker-ce.repo"
+paths:
+  pip: "/tmp/get-pip.py"
+  awx: "/usr/src/awx"
+urls:
+  pip: "https://bootstrap.pypa.io/get-pip.py"
+  awx: "https://github.com/ansible/awx.git"
